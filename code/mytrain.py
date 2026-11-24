@@ -1,7 +1,5 @@
 """Training of the GAN: loss functions and one epoch of training.
 
-TODO: complete `discriminator_loss`, `generator_loss` and `train_one_epoch`.
-
 Notation
     x           : real images
     G(z)        : images generated from latent variables z ~ N(0, I)
@@ -34,8 +32,9 @@ def discriminator_loss(real_logits, fake_logits):
     Returns:
         loss_d: a scalar tensor.
     """
-    # TODO
-    raise NotImplementedError("mytrain.py: discriminator_loss is not implemented")
+    real_loss = F.binary_cross_entropy_with_logits(real_logits, torch.ones_like(real_logits))
+    fake_loss = F.binary_cross_entropy_with_logits(fake_logits, torch.zeros_like(fake_logits))
+    return real_loss + fake_loss
 
 
 def generator_loss(fake_logits):
@@ -53,8 +52,7 @@ def generator_loss(fake_logits):
     Returns:
         loss_g: a scalar tensor.
     """
-    # TODO
-    raise NotImplementedError("mytrain.py: generator_loss is not implemented")
+    return F.binary_cross_entropy_with_logits(fake_logits, torch.ones_like(fake_logits))
 
 
 def train_one_epoch(generator, discriminator, optimizer_g, optimizer_d, dataloader, device):
@@ -91,5 +89,42 @@ def train_one_epoch(generator, discriminator, optimizer_g, optimizer_d, dataload
             d_real : D(x), probability given to the real images (step 2)
             d_fake : D(G(z)), probability given to the generated images (step 2)
     """
-    # TODO
-    raise NotImplementedError("mytrain.py: train_one_epoch is not implemented")
+    generator.train()
+    discriminator.train()
+
+    generator_parameters = tuple(generator.parameters())
+    metric_names = ("loss_d", "loss_g", "d_real", "d_fake")
+    totals = torch.zeros(len(metric_names), device=device)
+    num_images = 0
+
+    for images in dataloader:
+        images = images.to(device)
+        batch_size = images.size(0)
+        z = torch.randn(batch_size, generator.latent_dim, device=device)
+        fake = generator(z)
+
+        optimizer_d.zero_grad()
+        real_logits = discriminator(images)
+        fake_logits = discriminator(fake.detach())
+        loss_d = discriminator_loss(real_logits, fake_logits)
+        loss_d.backward()
+        optimizer_d.step()
+
+        optimizer_g.zero_grad()
+        loss_g = generator_loss(discriminator(fake))
+        loss_g.backward(inputs=generator_parameters)
+        optimizer_g.step()
+
+        with torch.no_grad():
+            batch_metrics = torch.stack((
+                loss_d,
+                loss_g,
+                real_logits.sigmoid().mean(),
+                fake_logits.sigmoid().mean(),
+            ))
+            totals += batch_size * batch_metrics
+        num_images += batch_size
+
+    if num_images == 0:
+        raise ValueError("train_one_epoch requires at least one training image")
+    return dict(zip(metric_names, (totals / num_images).tolist()))

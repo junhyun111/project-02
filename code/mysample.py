@@ -1,7 +1,4 @@
-"""Generation of new images with a trained generator.
-
-TODO: complete `sample`.
-"""
+"""Generation of new images with a trained generator."""
 
 import torch
 
@@ -20,5 +17,7 @@ def sample(generator, num_samples, device):
     Returns:
         generated images, shape (num_samples, 1, 32, 32), values in [0, 1].
     """
-    # TODO
-    raise NotImplementedError("mysample.py: sample is not implemented")
+    generator.eval()
+    with torch.no_grad():
+        z = torch.randn(num_samples, generator.latent_dim, device=device)
+        return generator(z)

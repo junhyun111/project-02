@@ -1,7 +1,5 @@
 """Generative adversarial network (GAN): generator and discriminator.
 
-TODO: complete the classes `Generator` and `Discriminator`.
-
 You are free to design the architectures (type and number of layers, their
 sizes, the latent dimension), but keep the interface described in the
 docstrings: the notebook and the other files rely on it.
@@ -15,7 +13,6 @@ Notation
     D(x)   : sigmoid(logit), the probability that the image x is real
 """
 
-import torch
 import torch.nn as nn
 
 
@@ -29,8 +26,21 @@ class Generator(nn.Module):
         Must set `self.latent_dim` (int, at least 2): the dimension of z.
         """
         super().__init__()
-        # TODO: set self.latent_dim and define the layers
-        raise NotImplementedError("mymodel.py: Generator.__init__ is not implemented")
+        self.latent_dim = 64
+        self.network = nn.Sequential(
+            nn.Linear(self.latent_dim, 128 * 4 * 4, bias=False),
+            nn.Unflatten(1, (128, 4, 4)),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, 1, kernel_size=4, stride=2, padding=1),
+            nn.Sigmoid(),
+        )
 
     def forward(self, z):
         """Generator: images G(z) generated from the latent variables z.
@@ -41,8 +51,7 @@ class Generator(nn.Module):
         Returns:
             generated images, shape (B, 1, 32, 32), values in [0, 1].
         """
-        # TODO
-        raise NotImplementedError("mymodel.py: Generator.forward is not implemented")
+        return self.network(z)
 
 
 class Discriminator(nn.Module):
@@ -53,8 +62,16 @@ class Discriminator(nn.Module):
         every argument you add needs a default value.
         """
         super().__init__()
-        # TODO: define the layers
-        raise NotImplementedError("mymodel.py: Discriminator.__init__ is not implemented")
+        self.network = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=4, stride=2, padding=1),
+            nn.LeakyReLU(0.2),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),
+            nn.LeakyReLU(0.2),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),
+            nn.LeakyReLU(0.2),
+            nn.Flatten(),
+            nn.Linear(128 * 4 * 4, 1),
+        )
 
     def forward(self, x):
         """Discriminator: one logit per image.
@@ -68,5 +85,4 @@ class Discriminator(nn.Module):
         Returns:
             logits, shape (B,).
         """
-        # TODO
-        raise NotImplementedError("mymodel.py: Discriminator.forward is not implemented")
+        return self.network(x).squeeze(-1)
